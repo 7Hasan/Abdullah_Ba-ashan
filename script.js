@@ -69,6 +69,102 @@
   };
 
   // هذا العداد شخصي ومحفوظ على جهاز الزائر فقط، وليس إحصاءً عاماً.
+  // سجل الدعاء محلي على الجهاز، ولا يرسل أي بيانات إلى خادم.
+  const wallKey = "abdullah_baashan_duas_v1";
+  const wallForm = $("#dua-form");
+  const wallList = $("#dua-list");
+  const wallStatus = $("#wall-status");
+  function readDuas() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(wallKey) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function renderDuas() {
+    if (!wallList) return;
+    wallList.replaceChildren();
+    const items = readDuas();
+    if (!items.length) {
+      const empty = document.createElement("p");
+      empty.className = "small";
+      empty.textContent = "لا توجد أدعية محفوظة على هذا الجهاز بعد.";
+      wallList.appendChild(empty);
+      return;
+    }
+    items.slice().reverse().forEach(item => {
+      const card = document.createElement("article");
+      card.className = "wall-msg-card";
+      const name = document.createElement("strong");
+      name.textContent = item.name || "زائر كريم";
+      const message = document.createElement("p");
+      message.textContent = item.message || "";
+      const date = document.createElement("span");
+      date.className = "small";
+      date.textContent = item.date || "";
+      card.append(name, message, date);
+      wallList.appendChild(card);
+    });
+  }
+  wallForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    const message = $("#dua-message")?.value.trim();
+    const name = $("#dua-name")?.value.trim().slice(0, 45) || "زائر كريم";
+    if (!message) {
+      if (wallStatus) wallStatus.textContent = "اكتب الدعاء أولاً.";
+      return;
+    }
+    try {
+      const items = readDuas();
+      items.push({name, message:message.slice(0, 500), date:new Date().toLocaleDateString("ar")});
+      localStorage.setItem(wallKey, JSON.stringify(items.slice(-100)));
+      wallForm.reset();
+      if (wallStatus) wallStatus.textContent = "تم حفظ الدعاء على هذا الجهاز.";
+      renderDuas();
+    } catch (_) {
+      if (wallStatus) wallStatus.textContent = "تعذر الحفظ. قد تكون مساحة التخزين ممتلئة أو معطلة.";
+    }
+  });
+  $("#clear-duas")?.addEventListener("click", () => {
+    if (!confirm("هل تريد مسح كل الأدعية المحفوظة على هذا الجهاز؟")) return;
+    try {
+      localStorage.removeItem(wallKey);
+      if (wallStatus) wallStatus.textContent = "تم مسح الأدعية من هذا الجهاز.";
+      renderDuas();
+    } catch (_) {
+      if (wallStatus) wallStatus.textContent = "تعذر مسح البيانات.";
+    }
+  });
+  renderDuas();
+
+  // طلب تثبيت الموقع عندما يدعم المتصفح واجهة التثبيت.
+  let installPrompt = null;
+  const installButton = $("#install-app");
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    installPrompt = event;
+    if (installButton) installButton.hidden = false;
+  });
+  installButton?.addEventListener("click", async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    installButton.hidden = true;
+  });
+  window.addEventListener("appinstalled", () => {
+    if (installButton) installButton.hidden = true;
+    if (wallStatus) wallStatus.textContent = "تم تثبيت الموقع على جهازك.";
+  });
+
+  // ملفات الموقع الأساسية تُخزّن محليًا للعمل دون اتصال بعد أول زيارة.
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(error =>
+        console.warn("تعذر تفعيل وضع عدم الاتصال:", error)
+      );
+    });
+  }
+
   const storageKey = "abdullah_baashan_tasbeeh_v1";
   let count = 0;
   try { count = Number(localStorage.getItem(storageKey)) || 0; } catch (_) {}
