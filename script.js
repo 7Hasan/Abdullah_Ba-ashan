@@ -136,16 +136,6 @@
       if (wallStatus) wallStatus.textContent = "تعذر الحفظ. قد تكون مساحة التخزين ممتلئة أو معطلة.";
     }
   });
-  $("#clear-duas")?.addEventListener("click", () => {
-    if (!confirm("هل تريد مسح كل الأدعية المحفوظة على هذا الجهاز؟")) return;
-    try {
-      localStorage.removeItem(wallKey);
-      if (wallStatus) wallStatus.textContent = "تم مسح الأدعية من هذا الجهاز.";
-      renderDuas();
-    } catch (_) {
-      if (wallStatus) wallStatus.textContent = "تعذر مسح البيانات.";
-    }
-  });
   renderDuas();
 
   // طلب تثبيت الموقع عندما يدعم المتصفح واجهة التثبيت.
