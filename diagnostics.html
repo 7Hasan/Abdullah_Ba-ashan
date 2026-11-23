@@ -57,6 +57,8 @@
 
   <h3>معلومات الجهاز والاتصال</h3>
   <pre id="device-info">جارٍ جمع المعلومات...</pre>
+  <h3>الأدعية المسترجعة من ردود النموذج</h3>
+  <div id="duas-list" style="display:grid;gap:10px;margin:12px 0"></div>
   <h3>نتيجة آخر اختبار</h3>
   <p id="status" class="status" aria-live="polite">لم يبدأ الاختبار بعد.</p>
   <pre id="output">ستظهر تفاصيل الاختبار هنا.</pre>
@@ -69,6 +71,7 @@
   const frame = document.getElementById("transport-frame");
   const status = document.getElementById("status");
   const output = document.getElementById("output");
+  const duasList = document.getElementById("duas-list");
   const readBtn = document.getElementById("read-btn");
   const sendBtn = document.getElementById("send-btn");
   let pending = null;
@@ -102,6 +105,30 @@
 
     const payload = data.payload;
     const elapsed = Date.now() - current.started;
+    if (current.kind === "READ") {
+      const duas = payload && Array.isArray(payload.duas) ? payload.duas : [];
+      duasList.replaceChildren();
+      if (!duas.length) {
+        const empty = document.createElement("p");
+        empty.textContent = payload && payload.success
+          ? "نجح الاتصال، لكن لم تُرجع ورقة ردود النموذج أي أدعية."
+          : "لم تصل قائمة أدعية قابلة للعرض.";
+        duasList.appendChild(empty);
+      } else {
+        duas.forEach((item, index) => {
+          const card = document.createElement("article");
+          card.style.cssText = "padding:12px;border:1px solid #ded5c5;border-radius:10px;background:#fff";
+          const text = document.createElement("p");
+          text.style.margin = "0 0 6px";
+          text.textContent = (index + 1) + ". " + (item.dua || item.text || "");
+          const meta = document.createElement("small");
+          meta.style.color = "#756c5c";
+          meta.textContent = [item.name || "زائر", item.date || ""].filter(Boolean).join(" — ");
+          card.append(text, meta);
+          duasList.appendChild(card);
+        });
+      }
+    }
     status.textContent = payload && payload.success
       ? "نجاح: استلمنا ردًا من Google Apps Script."
       : "وصل رد من Google، لكنه يشير إلى فشل العملية.";
