@@ -77,7 +77,7 @@
   }
 
   function receiveMessage(event) {
-    if (!pending || event.source !== frame.contentWindow) return;
+    if (!pending) return;
     const data = event.data;
     if (!data || data.channel !== "dua-wall-diagnostic" || data.token !== pending.token) return;
     const current = pending;
