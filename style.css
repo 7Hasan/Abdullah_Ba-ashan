@@ -72,3 +72,15 @@ footer p{margin:4px}
 .reveal.is-visible{opacity:1;transform:translateY(0)}
 @media(max-width:600px){.hero{padding:38px 16px 42px}.name-card{gap:13px;padding:15px}.deceased-img{width:86px;height:86px;flex-basis:86px}.name-card strong{font-size:17px}nav{gap:6px}nav a{padding:6px 10px;font-size:12px}.tilegrid,.apps-grid{grid-template-columns:1fr}.app-desc{min-height:0}.profile{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}.reveal{opacity:1;transform:none}}
+
+/* صورة كاملة بلا قصّ: نعرض كامل أبعاد الصورة الأصلية */
+.deceased-img{width:132px;height:158px;flex:0 0 132px;object-fit:contain;object-position:center;background:#eee5d5;border-radius:16px;padding:3px}
+.avatar{object-fit:contain;object-position:center;background:#eee5d5;border-radius:12px;padding:2px}
+.wall-form{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.wall-input{width:100%;resize:vertical}
+.wall-messages{display:grid;gap:10px;margin:14px 0}
+.wall-msg-card{padding:13px 15px;border:1px solid var(--line);border-right:4px solid var(--copper);border-radius:12px;background:#fff}
+.wall-msg-card strong{color:var(--olive-dark)}
+.wall-msg-card p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.install-btn{margin-top:14px}
+@media(max-width:600px){.name-card{align-items:center}.deceased-img{width:112px;height:142px;flex-basis:112px}}
