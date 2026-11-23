@@ -31,7 +31,7 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg-main);color:var(--ink);font-family:Tahoma,Arial,sans-serif;line-height:1.85}
 a{color:inherit;text-decoration:none}
 
-/* الهيدر بتدرج بني فاخر */
+/* الهيدر بتدرج أخضر زيتي */
 .hero{background:radial-gradient(circle at 80% 0%,#68794D 0,transparent 40%),linear-gradient(145deg,#435333,#596B43);color:#fff;padding:45px 20px;text-align:center;position:relative;overflow:hidden}.inner{max-width:760px;margin:auto}.bism{color:var(--gold);font-size:14px;letter-spacing:1px}.emblem{width:76px;height:76px;border:1px solid rgba(200,157,92,0.4);border-radius:50%;display:grid;place-items:center;margin:18px auto 10px;color:var(--gold);font-size:34px;background:rgba(200,157,92,0.08)}h1{font-size:clamp(28px,7vw,42px);line-height:1.35;margin:8px 0;color:#fff}.subtitle{color:#E8E1D1;margin:0 auto;max-width:520px;font-size:15px}
 .name-card{max-width:480px;margin:24px auto 0;padding:20px;border:1px solid rgba(200,157,92,0.4);border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02));backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
 .deceased-img{display:grid;place-items:center;font-size:38px;font-weight:bold;color:#F3EBDD;background:#596B43;width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);box-shadow:0 4px 15px rgba(0,0,0,0.4)}
@@ -117,7 +117,7 @@ footer{text-align:center;padding:30px 15px 40px;color:var(--muted);font-size:12p
         <h1>صدقة جارية<br>عن الفقيه عبدالله براهم باعشن</h1>
         <p class="subtitle">مساحة مباركة للقرآن والذكر والدعاء، نسأل الله أن ينفع بها، وأن يغفر لفقيدنا ويرحمه.</p>
         <div class="name-card">
-            <img src="" alt="سعيد باوزير رحمه الله" class="deceased-img" onerror="this.style.display='none'">
+            <div class="deceased-img" role="img" aria-label="الفقيه عبدالله براهم باعشن">ع</div>
             <div>
                 <strong>الفقيه عبدالله براهم باعشن رحمة الله علية</strong>
                 <p>اللهم اغفر له وارحمه، وعافه واعفُ عنه، وأكرم نزله ووسّع مدخله.</p>
@@ -316,7 +316,7 @@ footer{text-align:center;padding:30px 15px 40px;color:var(--muted);font-size:12p
 
 <section class="section">
     <div class="profile">
-        <img src="" alt="عبدالله براهم باعشن" class="avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'76\' height=\'76\'><rect width=\'100%\' height=\'100%\' fill=\'%23c89d5c\'/><text x=\'50%\' y=\'50%\' font-size=\'32\' text-anchor=\'middle\' dominant-baseline=\'central\' fill=\'%232c1d11\' font-family=\'Tahoma\'>س</text></svg>'">
+        <div class="avatar" role="img" aria-label="الفقيه عبدالله براهم باعشن">ع</div><rect width=\'100%\' height=\'100%\' fill=\'%23c89d5c\'/><text x=\'50%\' y=\'50%\' font-size=\'32\' text-anchor=\'middle\' dominant-baseline=\'central\' fill=\'%232c1d11\' font-family=\'Tahoma\'>س</text></svg>'">
         <div>
             <h2 style="margin-bottom:0">ذكر طيب ودعاء</h2>
             <p>عبدالله براهم باعشن رحمه الله عليه</p>
@@ -444,7 +444,7 @@ async function toggleRealVisitorCount() {
         eyeIcon.textContent = '👁️';
         countSpan.style.display = 'inline';
         try {
-            let response = await fetch('https://api.countapi.xyz/hit/7hasan_salem_bamosaid/visits');
+            let response = await fetch('https://api.countapi.xyz/hit/7hasan_abdullah_baashan/visits');
             let data = await response.json();
             countSpan.textContent = data.value;
         } catch (error) {
