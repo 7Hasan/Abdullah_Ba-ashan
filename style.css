@@ -84,3 +84,11 @@ footer p{margin:4px}
 .wall-msg-card p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .install-btn{margin-top:14px}
 @media(max-width:600px){.name-card{align-items:center}.deceased-img{width:112px;height:142px;flex-basis:112px}}
+
+/* تذييل الموقع */
+.footer-credit{display:flex;align-items:center;justify-content:center;gap:13px;margin:20px auto 12px;color:var(--olive-dark)}
+.footer-credit img{width:58px;height:58px;object-fit:contain;object-position:center;background:#eee5d5;border:2px solid var(--copper);border-radius:12px;padding:2px}
+.footer-credit p{margin:0;line-height:1.6}.footer-credit strong{font-size:16px}
+.footer-social{display:flex;justify-content:center;gap:10px;margin:12px auto}
+.social-link{display:inline-flex;align-items:center;justify-content:center;min-width:104px;padding:8px 15px;border:1px solid var(--line);border-radius:12px;font-size:13px;font-weight:700;transition:transform .2s,background .2s}
+.social-link:hover{transform:translateY(-2px)}.social-link.whatsapp{color:#167b48;background:#e5f4eb;border-color:#b8dfc8}.social-link.instagram{color:#a13d70;background:#f8eaf1;border-color:#e9c4d5}
