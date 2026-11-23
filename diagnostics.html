@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#435333">
+  <title>فحص سجل الدعاء</title>
+  <style>
+    :root{color-scheme:light;--olive:#435333;--bg:#f3ebdd;--copper:#b87945}
+    *{box-sizing:border-box}
+    body{margin:0;padding:20px;background:var(--bg);color:#29291f;font-family:Arial,sans-serif;line-height:1.7}
+    main{max-width:720px;margin:24px auto;background:#fffdf8;border:1px solid #ded5c5;border-radius:18px;padding:22px;box-shadow:0 8px 28px #0000000b}
+    h1{margin-top:0;color:var(--olive);font-size:24px}
+    p{margin:8px 0}
+    label{display:block;font-weight:bold;margin:14px 0 5px}
+    input,textarea{width:100%;padding:12px;border:1px solid #cfc7b8;border-radius:9px;font:inherit;background:white}
+    textarea{min-height:100px;resize:vertical}
+    button{border:0;border-radius:9px;background:var(--olive);color:white;padding:12px 18px;font:inherit;font-weight:bold;cursor:pointer;margin:10px 5px 5px 0}
+    button.secondary{background:#756c5c}
+    button:disabled{opacity:.55;cursor:wait}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f1e9;border:1px solid #e1dacd;border-radius:10px;padding:13px;min-height:90px;direction:ltr;text-align:left;font:13px/1.6 monospace}
+    .hint{font-size:14px;color:#655f54}
+    .warning{border-right:4px solid var(--copper);padding:8px 12px;background:#fbf4eb;border-radius:6px}
+    .status{font-weight:bold;color:var(--olive)}
+  </style>
+</head>
+<body>
+<main>
+  <h1>صفحة تشخيص سجل الدعاء</h1>
+  <p>هذه الصفحة تختبر الاتصال بخدمة الأدعية من هذا الجهاز، بنفس أسلوب JSONP المستخدم في الموقع.</p>
+  <p class="warning">زر الإرسال يضيف دعاء اختبار إلى Google Sheets بحالة قيد المراجعة. لن يظهر للزوار إلا بعد نشره من الجدول.</p>
+
+  <label for="test-name">اسم الاختبار</label>
+  <input id="test-name" maxlength="45" value="اختبار الجوال">
+  <label for="test-dua">نص دعاء الاختبار</label>
+  <textarea id="test-dua" maxlength="500">دعاء تجريبي لفحص اتصال سجل الدعاء من الجوال - يمكن تجاهله.</textarea>
+
+  <div>
+    <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية</button>
+    <button id="send-btn" type="button">إرسال دعاء الاختبار</button>
+  </div>
+
+  <h3>معلومات الجهاز والاتصال</h3>
+  <pre id="device-info">جارٍ جمع المعلومات...</pre>
+  <h3>نتيجة آخر اختبار</h3>
+  <p id="status" class="status" aria-live="polite">لم يبدأ الاختبار بعد.</p>
+  <pre id="output">ستظهر تفاصيل الاختبار هنا.</pre>
+</main>
+<script>
+(() => {
+  "use strict";
+  const API = "https://script.google.com/macros/s/AKfycbylOH-ILGZZUnR52h1AFowa5EYsL0tIWmPoWDkefvNvYC7ATR9jUHGa9Ai3QSFhsM7S/exec";
+  const status = document.getElementById("status");
+  const output = document.getElementById("output");
+  const readBtn = document.getElementById("read-btn");
+  const sendBtn = document.getElementById("send-btn");
+
+  document.getElementById("device-info").textContent = [
+    "User-Agent: " + navigator.userAgent,
+    "Online: " + navigator.onLine,
+    "Language: " + navigator.language,
+    "Platform: " + (navigator.platform || "غير متاح"),
+    "Page URL: " + location.href,
+    "Time: " + new Date().toISOString()
+  ].join("\n");
+
+  window.addEventListener("error", event => {
+    output.textContent += "\n[PAGE ERROR] " + (event.message || "unknown") +
+      " | " + (event.filename || "") + ":" + (event.lineno || "");
+  });
+  window.addEventListener("unhandledrejection", event => {
+    output.textContent += "\n[UNHANDLED REJECTION] " +
+      String(event.reason && (event.reason.stack || event.reason.message) || event.reason);
+  });
+
+  function jsonp(params) {
+    return new Promise((resolve, reject) => {
+      const callback = "__diag_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+      const script = document.createElement("script");
+      const query = new URLSearchParams({...params, callback});
+      const requestUrl = API + "?" + query.toString();
+      let done = false;
+      const started = Date.now();
+      const timer = setTimeout(() => finish(new Error("TIMEOUT بعد 20000ms")), 20000);
+
+      function cleanup() {
+        clearTimeout(timer);
+        script.onerror = null;
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[callback]; } catch (_) { window[callback] = undefined; }
+      }
+      function finish(error, data) {
+        if (done) return;
+        done = true;
+        cleanup();
+        if (error) reject(error);
+        else resolve({data, elapsed: Date.now() - started, requestUrl});
+      }
+
+      window[callback] = data => finish(null, data);
+      script.onerror = event => finish(new Error("SCRIPT_ONERROR: تعذر تحميل استجابة Google Apps Script. نوع الحدث: " + (event && event.type || "غير معروف")));
+      script.src = requestUrl;
+      output.textContent = "REQUEST URL:\n" + requestUrl + "\n\nجارٍ انتظار الاستجابة...";
+      document.head.appendChild(script);
+    });
+  }
+
+  async function run(kind, params) {
+    readBtn.disabled = true;
+    sendBtn.disabled = true;
+    status.textContent = "جارٍ تنفيذ الاختبار...";
+    output.textContent = "بدأ الاختبار: " + kind + "\nالوقت: " + new Date().toISOString();
+    try {
+      const result = await jsonp(params);
+      const data = result.data;
+      status.textContent = data && data.success
+        ? "نجاح: استلمنا استجابة صحيحة من الخدمة."
+        : "وصل رد من الخدمة لكنه يشير إلى فشل.";
+      output.textContent = [
+        "TEST: " + kind,
+        "ELAPSED: " + result.elapsed + " ms",
+        "ONLINE: " + navigator.onLine,
+        "REQUEST URL: " + result.requestUrl,
+        "RESPONSE:",
+        JSON.stringify(data, null, 2)
+      ].join("\n");
+    } catch (error) {
+      status.textContent = "فشل الاختبار: " + (error.message || String(error));
+      output.textContent += "\n\nERROR NAME: " + (error.name || "Error") +
+        "\nERROR MESSAGE: " + (error.message || String(error)) +
+        "\nONLINE: " + navigator.onLine +
+        "\nTIME: " + new Date().toISOString();
+    } finally {
+      readBtn.disabled = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  readBtn.addEventListener("click", () => run("READ", {}));
+  sendBtn.addEventListener("click", () => {
+    const dua = document.getElementById("test-dua").value.trim();
+    const name = document.getElementById("test-name").value.trim() || "اختبار الجوال";
+    if (!dua) {
+      status.textContent = "اكتب نص دعاء الاختبار أولاً.";
+      return;
+    }
+    if (!confirm("سيتم إرسال دعاء اختبار إلى جدول Google Sheets بحالة قيد المراجعة. هل تريد المتابعة؟")) return;
+    run("SUBMIT", {action:"submit", dua, name});
+  });
+})();
+</script>
+</body>
+</html>
