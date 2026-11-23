@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#435333">
-  <title>فحص سجل الدعاء</title>
+  <title>فحص سجل الدعاء - iframe وPOST</title>
   <style>
     :root{color-scheme:light;--olive:#435333;--bg:#f3ebdd;--copper:#b87945}
     *{box-sizing:border-box}
@@ -19,25 +19,25 @@
     button.secondary{background:#756c5c}
     button:disabled{opacity:.55;cursor:wait}
     pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f1e9;border:1px solid #e1dacd;border-radius:10px;padding:13px;min-height:90px;direction:ltr;text-align:left;font:13px/1.6 monospace}
-    .hint{font-size:14px;color:#655f54}
     .warning{border-right:4px solid var(--copper);padding:8px 12px;background:#fbf4eb;border-radius:6px}
     .status{font-weight:bold;color:var(--olive)}
+    iframe{display:none;width:0;height:0;border:0}
   </style>
 </head>
 <body>
 <main>
   <h1>صفحة تشخيص سجل الدعاء</h1>
-  <p>هذه الصفحة تختبر الاتصال بخدمة الأدعية من هذا الجهاز، بنفس أسلوب JSONP المستخدم في الموقع.</p>
-  <p class="warning">زر الإرسال يضيف دعاء اختبار إلى Google Sheets بحالة قيد المراجعة. لن يظهر للزوار إلا بعد نشره من الجدول.</p>
+  <p>هذه النسخة تختبر الاتصال باستخدام iframe مخفي وpostMessage للقراءة، ونموذج POST مخفي للإرسال. لن تنتقل من هذه الصفحة أثناء الاختبار.</p>
+  <p class="warning">زر الإرسال يضيف صفًا جديدًا في Google Sheets بحالة «قيد المراجعة». إذا انتهى الاختبار بمهلة انتظار، فقد يكون الإرسال وصل رغم عدم وصول الرد؛ افحص الجدول قبل إعادة المحاولة.</p>
 
   <label for="test-name">اسم الاختبار</label>
-  <input id="test-name" maxlength="45" value="اختبار الجوال">
+  <input id="test-name" maxlength="45" value="اختبار iframe POST">
   <label for="test-dua">نص دعاء الاختبار</label>
-  <textarea id="test-dua" maxlength="500">دعاء تجريبي لفحص اتصال سجل الدعاء من الجوال - يمكن تجاهله.</textarea>
+  <textarea id="test-dua" maxlength="500">دعاء تجريبي لفحص استقبال iframe وPOST من الجوال - يمكن تجاهله.</textarea>
 
   <div>
-    <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية</button>
-    <button id="send-btn" type="button">إرسال دعاء الاختبار</button>
+    <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية (iframe)</button>
+    <button id="send-btn" type="button">اختبار إرسال الدعاء (POST)</button>
   </div>
 
   <h3>معلومات الجهاز والاتصال</h3>
@@ -45,15 +45,18 @@
   <h3>نتيجة آخر اختبار</h3>
   <p id="status" class="status" aria-live="polite">لم يبدأ الاختبار بعد.</p>
   <pre id="output">ستظهر تفاصيل الاختبار هنا.</pre>
+  <iframe id="transport-frame" name="duaTransportFrame" title="اتصال خلفي"></iframe>
 </main>
 <script>
 (() => {
   "use strict";
   const API = "https://script.google.com/macros/s/AKfycbylOH-ILGZZUnR52h1AFowa5EYsL0tIWmPoWDkefvNvYC7ATR9jUHGa9Ai3QSFhsM7S/exec";
+  const frame = document.getElementById("transport-frame");
   const status = document.getElementById("status");
   const output = document.getElementById("output");
   const readBtn = document.getElementById("read-btn");
   const sendBtn = document.getElementById("send-btn");
+  let pending = null;
 
   document.getElementById("device-info").textContent = [
     "User-Agent: " + navigator.userAgent,
@@ -64,89 +67,122 @@
     "Time: " + new Date().toISOString()
   ].join("\n");
 
-  window.addEventListener("error", event => {
-    output.textContent += "\n[PAGE ERROR] " + (event.message || "unknown") +
-      " | " + (event.filename || "") + ":" + (event.lineno || "");
-  });
-  window.addEventListener("unhandledrejection", event => {
-    output.textContent += "\n[UNHANDLED REJECTION] " +
-      String(event.reason && (event.reason.stack || event.reason.message) || event.reason);
-  });
-
-  function jsonp(params) {
-    return new Promise((resolve, reject) => {
-      const callback = "__diag_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
-      const script = document.createElement("script");
-      const query = new URLSearchParams({...params, callback});
-      const requestUrl = API + "?" + query.toString();
-      let done = false;
-      const started = Date.now();
-      const timer = setTimeout(() => finish(new Error("TIMEOUT بعد 20000ms")), 20000);
-
-      function cleanup() {
-        clearTimeout(timer);
-        script.onerror = null;
-        if (script.parentNode) script.parentNode.removeChild(script);
-        try { delete window[callback]; } catch (_) { window[callback] = undefined; }
-      }
-      function finish(error, data) {
-        if (done) return;
-        done = true;
-        cleanup();
-        if (error) reject(error);
-        else resolve({data, elapsed: Date.now() - started, requestUrl});
-      }
-
-      window[callback] = data => finish(null, data);
-      script.onerror = event => finish(new Error("SCRIPT_ONERROR: تعذر تحميل استجابة Google Apps Script. نوع الحدث: " + (event && event.type || "غير معروف")));
-      script.src = requestUrl;
-      output.textContent = "REQUEST URL:\n" + requestUrl + "\n\nجارٍ انتظار الاستجابة...";
-      document.head.appendChild(script);
-    });
+  function makeToken() {
+    return "diag_" + Date.now() + "_" + Math.random().toString(36).slice(2, 12);
   }
 
-  async function run(kind, params) {
-    readBtn.disabled = true;
-    sendBtn.disabled = true;
+  function setBusy(busy) {
+    readBtn.disabled = busy;
+    sendBtn.disabled = busy;
+  }
+
+  function receiveMessage(event) {
+    if (!pending || event.source !== frame.contentWindow) return;
+    const data = event.data;
+    if (!data || data.channel !== "dua-wall-diagnostic" || data.token !== pending.token) return;
+    const current = pending;
+    pending = null;
+    clearTimeout(current.timer);
+    setBusy(false);
+
+    const payload = data.payload;
+    const elapsed = Date.now() - current.started;
+    status.textContent = payload && payload.success
+      ? "نجاح: استلمنا ردًا من Google Apps Script."
+      : "وصل رد من Google، لكنه يشير إلى فشل العملية.";
+
+    output.textContent = [
+      "TEST: " + current.kind,
+      "METHOD: " + current.method,
+      "ELAPSED: " + elapsed + " ms",
+      "RESPONSE ORIGIN: " + event.origin,
+      "ONLINE: " + navigator.onLine,
+      "REQUEST URL: " + current.requestUrl,
+      "RESPONSE:",
+      JSON.stringify(payload, null, 2)
+    ].join("\n");
+  }
+
+  window.addEventListener("message", receiveMessage);
+
+  function begin(kind, method, requestUrl) {
+    if (pending) return null;
+    const token = makeToken();
+    const started = Date.now();
+    const item = {kind, method, token, started, requestUrl, timer:null};
+    item.timer = setTimeout(() => {
+      if (pending !== item) return;
+      pending = null;
+      setBusy(false);
+      status.textContent = "انتهت مهلة انتظار رد Google بعد 25 ثانية.";
+      output.textContent += "\n\nTIMEOUT: لم تصل رسالة postMessage من إطار Google." +
+        "\nMETHOD: " + method +
+        "\nREQUEST URL: " + requestUrl +
+        "\nتنبيه: في اختبار الإرسال، افحص Google Sheets قبل إعادة المحاولة؛ فقد يكون الصف قد أُضيف.";
+    }, 25000);
+    pending = item;
+    setBusy(true);
     status.textContent = "جارٍ تنفيذ الاختبار...";
-    output.textContent = "بدأ الاختبار: " + kind + "\nالوقت: " + new Date().toISOString();
-    try {
-      const result = await jsonp(params);
-      const data = result.data;
-      status.textContent = data && data.success
-        ? "نجاح: استلمنا استجابة صحيحة من الخدمة."
-        : "وصل رد من الخدمة لكنه يشير إلى فشل.";
-      output.textContent = [
-        "TEST: " + kind,
-        "ELAPSED: " + result.elapsed + " ms",
-        "ONLINE: " + navigator.onLine,
-        "REQUEST URL: " + result.requestUrl,
-        "RESPONSE:",
-        JSON.stringify(data, null, 2)
-      ].join("\n");
-    } catch (error) {
-      status.textContent = "فشل الاختبار: " + (error.message || String(error));
-      output.textContent += "\n\nERROR NAME: " + (error.name || "Error") +
-        "\nERROR MESSAGE: " + (error.message || String(error)) +
-        "\nONLINE: " + navigator.onLine +
-        "\nTIME: " + new Date().toISOString();
-    } finally {
-      readBtn.disabled = false;
-      sendBtn.disabled = false;
-    }
+    output.textContent = [
+      "TEST: " + kind,
+      "METHOD: " + method,
+      "REQUEST URL: " + requestUrl,
+      "جارٍ انتظار رسالة من Google Apps Script..."
+    ].join("\n");
+    return token;
   }
 
-  readBtn.addEventListener("click", () => run("READ", {}));
-  sendBtn.addEventListener("click", () => {
+  function runRead() {
+    const token = makeToken();
+    const requestUrl = API + "?mode=frameRead&token=" + encodeURIComponent(token);
+    const activeToken = begin("READ", "GET داخل iframe مخفي", requestUrl);
+    if (!activeToken) return;
+    // نستخدم الرمز نفسه الذي ينتظره مستمع postMessage.
+    pending.token = token;
+    frame.src = requestUrl;
+  }
+
+  function runSubmit() {
     const dua = document.getElementById("test-dua").value.trim();
-    const name = document.getElementById("test-name").value.trim() || "اختبار الجوال";
+    const name = document.getElementById("test-name").value.trim() || "اختبار iframe POST";
     if (!dua) {
       status.textContent = "اكتب نص دعاء الاختبار أولاً.";
       return;
     }
-    if (!confirm("سيتم إرسال دعاء اختبار إلى جدول Google Sheets بحالة قيد المراجعة. هل تريد المتابعة؟")) return;
-    run("SUBMIT", {action:"submit", dua, name});
-  });
+    if (dua.length > 500 || name.length > 45) {
+      status.textContent = "تحقق من طول الدعاء (500 حرف) والاسم (45 حرفًا).";
+      return;
+    }
+    if (!confirm("سيُضاف صف اختبار جديد إلى Google Sheets بحالة قيد المراجعة. هل تريد المتابعة؟")) return;
+
+    const requestUrl = API + " [POST form -> hidden iframe]";
+    const token = begin("SUBMIT", "POST form داخل iframe مخفي", requestUrl);
+    if (!token) return;
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = API;
+    form.target = frame.name;
+    form.acceptCharset = "UTF-8";
+    form.style.display = "none";
+
+    const fields = {mode:"frameSubmit", action:"submit", dua, name, token};
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    output.textContent += "\nFORM TARGET: " + frame.name + "\nFORM FIELDS: mode, action, dua, name, token";
+    form.submit();
+    setTimeout(() => form.remove(), 1000);
+  }
+
+  readBtn.addEventListener("click", runRead);
+  sendBtn.addEventListener("click", runSubmit);
 })();
 </script>
 </body>
