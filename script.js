@@ -76,8 +76,20 @@
   const wallStatus = $("#wall-status");
   function readDuas() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(wallKey) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
+      const current = localStorage.getItem(wallKey);
+      if (current !== null) {
+        const parsed = JSON.parse(current);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+      // ترحيل رسائل سجل الدعاء من النسخة السابقة إن كانت محفوظة على الجهاز.
+      const legacy = JSON.parse(localStorage.getItem("abdullah_wall_msgs") || "[]");
+      const migrated = Array.isArray(legacy) ? legacy.map(item => ({
+        name: String(item.name || "زائر كريم").slice(0, 45),
+        message: String(item.text || "").slice(0, 500),
+        date: "من النسخة السابقة"
+      })).filter(item => item.message) : [];
+      if (migrated.length) localStorage.setItem(wallKey, JSON.stringify(migrated.slice(-100)));
+      return migrated;
     } catch (_) { return []; }
   }
   function renderDuas() {
