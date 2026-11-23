@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "صدقة جارية عن الفقيه عبدالله براهم باعشن",
+  "short_name": "صدقة عبدالله",
+  "description": "قرآن وأذكار ودعاء عن روح الفقيه عبدالله براهم باعشن رحمه الله",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3ebdd",
+  "theme_color": "#435333",
+  "icons": [
+    {
+      "src": "./Abdullah.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
