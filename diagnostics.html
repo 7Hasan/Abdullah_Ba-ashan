@@ -30,6 +30,19 @@
   <p>هذه النسخة تختبر الاتصال باستخدام iframe مخفي وpostMessage للقراءة، ونموذج POST مخفي للإرسال. لن تنتقل من هذه الصفحة أثناء الاختبار.</p>
   <p class="warning">زر الإرسال يضيف صفًا جديدًا في Google Sheets بحالة «قيد المراجعة». إذا انتهى الاختبار بمهلة انتظار، فقد يكون الإرسال وصل رغم عدم وصول الرد؛ افحص الجدول قبل إعادة المحاولة.</p>
 
+  <section style="margin:20px 0;padding:16px;border:1px solid #ded5c5;border-radius:14px;background:#fff">
+    <h2 style="margin:0 0 8px;color:var(--olive);font-size:20px">اختبار نموذج Google Forms</h2>
+    <p>هذا نموذج تجريبي مضمّن داخل صفحة الفحص. الردود تُحفظ في ورقة الردود المرتبطة بملف Google Sheets، ولا تُضاف إلى ورقة الأدعية الحالية تلقائيًا.</p>
+    <iframe
+      src="https://forms.gle/JvFut1VMvcXgiKCs8?embedded=true"
+      title="نموذج دعاء للفقيد - تجربة"
+      loading="lazy"
+      style="width:100%;height:900px;border:0;border-radius:8px;background:#fff"
+      allow="camera; microphone; fullscreen"
+    >جارٍ تحميل نموذج الدعاء...</iframe>
+    <p style="font-size:13px;color:#756c5c">إذا لم يظهر النموذج أو طلب تسجيل الدخول، أخبرنا بنص الرسالة الظاهرة. لا ترسل دعاءً حقيقيًا أثناء الاختبار الأول.</p>
+  </section>
+
   <label for="test-name">اسم الاختبار</label>
   <input id="test-name" maxlength="45" value="اختبار iframe POST">
   <label for="test-dua">نص دعاء الاختبار</label>
