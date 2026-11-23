@@ -12,10 +12,10 @@
   "theme_color": "#435333",
   "icons": [
     {
-      "src": "./Abdullah.jpg",
+      "src": "./icon.svg",
       "sizes": "any",
-      "type": "image/jpeg",
-      "purpose": "any"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
