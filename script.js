@@ -68,70 +68,148 @@
     if (base) window.open(base + encodeURIComponent(query), "_blank", "noopener,noreferrer");
   };
 
-  // هذا العداد شخصي ومحفوظ على جهاز الزائر فقط، وليس إحصاءً عاماً.
-  // سجل الدعاء محلي على الجهاز، ولا يرسل أي بيانات إلى خادم.
-  const wallKey = "abdullah_baashan_duas_v1";
+  // سجل الدعاء مركزي: القراءة من Google Sheets والإرسال للمراجعة.
+  const DUA_API_URL = "https://script.google.com/macros/s/AKfycbylOH-ILGZZUnR52h1AFowa5EYsL0tIWmPoWDkefvNvYC7ATR9jUHGa9Ai3QSFhsM7S/exec";
   const wallForm = $("#dua-form");
   const wallList = $("#dua-list");
   const wallStatus = $("#wall-status");
-  function readDuas() {
-    try {
-      const current = localStorage.getItem(wallKey);
-      if (current !== null) {
-        const parsed = JSON.parse(current);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-      // ترحيل رسائل سجل الدعاء من النسخة السابقة إن كانت محفوظة على الجهاز.
-      const legacy = JSON.parse(localStorage.getItem("abdullah_wall_msgs") || "[]");
-      const migrated = Array.isArray(legacy) ? legacy.map(item => ({
-        name: String(item.name || "زائر كريم").slice(0, 45),
-        message: String(item.text || "").slice(0, 500),
-        date: "من النسخة السابقة"
-      })).filter(item => item.message) : [];
-      if (migrated.length) localStorage.setItem(wallKey, JSON.stringify(migrated.slice(-100)));
-      return migrated;
-    } catch (_) { return []; }
+  let publishedDuas = [];
+
+  // JSONP لتجاوز قيود CORS في GitHub Pages مع Apps Script.
+  function requestDuaApi(params) {
+    return new Promise((resolve, reject) => {
+      const callbackName = "__duaApiCallback_" + Date.now() + "_" +
+        Math.floor(Math.random() * 1000000);
+      const script = document.createElement("script");
+      const query = new URLSearchParams({...params, callback: callbackName});
+      let settled = false;
+
+      const cleanup = () => {
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+        window.clearTimeout(timeout);
+      };
+
+      const finish = (error, result) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) reject(error);
+        else resolve(result);
+      };
+
+      window[callbackName] = result => finish(null, result);
+      script.onerror = () => finish(new Error("تعذر الاتصال بخدمة سجل الدعاء."));
+      script.src = DUA_API_URL + "?" + query.toString();
+      const timeout = window.setTimeout(
+        () => finish(new Error("انتهت مهلة الاتصال. حاول مرة أخرى.")),
+        15000
+      );
+      document.head.appendChild(script);
+    });
   }
+
   function renderDuas() {
     if (!wallList) return;
     wallList.replaceChildren();
-    const items = readDuas();
-    if (!items.length) {
+
+    if (!publishedDuas.length) {
       const empty = document.createElement("p");
       empty.className = "small";
-      empty.textContent = "لا توجد أدعية محفوظة على هذا الجهاز بعد.";
+      empty.textContent = "لا توجد أدعية منشورة حتى الآن. كن أول من يترك دعاءً.";
       wallList.appendChild(empty);
       return;
     }
-    items.slice().reverse().forEach(item => {
+
+    publishedDuas.slice().reverse().forEach(item => {
       const card = document.createElement("article");
       card.className = "wall-msg-card";
+
       const name = document.createElement("strong");
       name.textContent = item.name || "زائر كريم";
+
       const message = document.createElement("p");
-      message.textContent = item.message || "";
+      message.textContent = item.dua || "";
+
       const date = document.createElement("span");
       date.className = "small";
-      date.textContent = item.date || "";
+      if (item.date) {
+        const parsedDate = new Date(item.date);
+        date.textContent = Number.isNaN(parsedDate.getTime())
+          ? ""
+          : parsedDate.toLocaleDateString("ar");
+      }
+
       card.append(name, message, date);
       wallList.appendChild(card);
     });
   }
-  wallForm?.addEventListener("submit", event => {
+
+  async function loadPublishedDuas() {
+    if (wallStatus) wallStatus.textContent = "جارٍ تحميل الأدعية المنشورة...";
+    try {
+      const result = await requestDuaApi({});
+      if (!result || !result.success || !Array.isArray(result.duas)) {
+        throw new Error(result?.message || "تعذر تحميل الأدعية.");
+      }
+      publishedDuas = result.duas;
+      renderDuas();
+      if (wallStatus) wallStatus.textContent = "";
+    } catch (error) {
+      if (wallStatus) wallStatus.textContent =
+        "تعذر تحميل سجل الدعاء حاليًا. يرجى تحديث الصفحة لاحقًا.";
+      if (wallList) wallList.replaceChildren();
+      console.warn("Dua list loading failed:", error);
+    }
+  }
+
+  wallForm?.addEventListener("submit", async event => {
     event.preventDefault();
-    const message = $("#dua-message")?.value.trim();
+    const message = $("#dua-message")?.value.trim() || "";
     const name = $("#dua-name")?.value.trim().slice(0, 45) || "زائر كريم";
+    const submitButton = wallForm.querySelector('button[type="submit"]');
+
     if (!message) {
       if (wallStatus) wallStatus.textContent = "اكتب الدعاء أولاً.";
       return;
     }
+    if (message.length > 500) {
+      if (wallStatus) wallStatus.textContent = "الدعاء يجب ألا يتجاوز 500 حرف.";
+      return;
+    }
+
+    if (submitButton) submitButton.disabled = true;
+    if (wallStatus) wallStatus.textContent = "جارٍ إرسال الدعاء للمراجعة...";
+
     try {
-      const items = readDuas();
-      items.push({name, message:message.slice(0, 500), date:new Date().toLocaleDateString("ar")});
-      localStorage.setItem(wallKey, JSON.stringify(items.slice(-100)));
+      const result = await requestDuaApi({
+        action: "submit",
+        dua: message,
+        name: name
+      });
+
+      if (!result || !result.success) {
+        throw new Error(result?.message || "تعذر إرسال الدعاء.");
+      }
+
       wallForm.reset();
-      if (wallStatus) wallStatus.textContent = "تم حفظ الدعاء على هذا الجهاز.";
-      renderDuas();
+      if (wallStatus) {
+        wallStatus.textContent =
+          "وصل دعاؤك بنجاح، وسيظهر للجميع بعد مراجعته والموافقة عليه.";
+      }
+      // لا نضيف الدعاء إلى القائمة؛ فهو قيد المراجعة ولن يظهر قبل الموافقة.
+    } catch (error) {
+      if (wallStatus) {
+        wallStatus.textContent =
+          error.message || "تعذر إرسال الدعاء. حاول مرة أخرى.";
+      }
+      console.warn("Dua submission failed:", error);
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+
+  loadPublishedDuas();
     } catch (_) {
       if (wallStatus) wallStatus.textContent = "تعذر الحفظ. قد تكون مساحة التخزين ممتلئة أو معطلة.";
     }
