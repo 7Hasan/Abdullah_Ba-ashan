@@ -1,4 +1,4 @@
-const CACHE_NAME = "abdullah-baashan-v3";
+const CACHE_NAME = "abdullah-baashan-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -29,31 +29,24 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
 
-  // صفحات الموقع وملفاته: استخدم النسخة المخزنة عند عدم توفر الشبكة.
+  // اجلب النسخة الأحدث أولاً، واستخدم المخزنة فقط عند انقطاع الاتصال.
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) {
-        const refresh = fetch(request).then(response => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-          }
-          return response;
-        }).catch(() => cached);
-        return cached;
+    fetch(request).then(response => {
+      if (response && response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
       }
-      return fetch(request).then(response => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
-        return response;
-      }).catch(() => {
-        if (request.mode === "navigate") return caches.match("./index.html");
-        return new Response("أنت غير متصل بالإنترنت وهذا المورد غير محفوظ على الجهاز.", {
-          status: 503,
-          headers: { "Content-Type": "text/plain; charset=utf-8" }
-        });
+      return response;
+    }).catch(async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      if (request.mode === "navigate") {
+        const page = await caches.match("./index.html");
+        if (page) return page;
+      }
+      return new Response("أنت غير متصل بالإنترنت وهذا المورد غير محفوظ على الجهاز.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8" }
       });
     })
   );
