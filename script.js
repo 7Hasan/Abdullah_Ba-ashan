@@ -210,11 +210,6 @@
   });
 
   loadPublishedDuas();
-    } catch (_) {
-      if (wallStatus) wallStatus.textContent = "تعذر الحفظ. قد تكون مساحة التخزين ممتلئة أو معطلة.";
-    }
-  });
-  renderDuas();
 
   // طلب تثبيت الموقع عندما يدعم المتصفح واجهة التثبيت.
   let installPrompt = null;
