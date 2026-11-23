@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#435333">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./Abdullah.jpg">
   <meta name="description" content="صدقة جارية عن روح الفقيه عبدالله براهم باعشن رحمه الله. قرآن كريم وأذكار ودعاء وروابط نافعة.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="صدقة جارية عن الفقيه عبدالله براهم باعشن رحمه الله">
@@ -34,7 +39,7 @@
 
 <nav aria-label="التنقل الرئيسي">
   <a href="#quran">القرآن الكريم</a><a href="#search">بحث إسلامي</a><a href="#cards">بطاقات دعاء</a>
-  <a href="#dua">الدعاء</a><a href="#adhkar">الأذكار</a><a href="#apps">تطبيقات نافعة</a><a href="#interactive">التسبيح</a>
+  <a href="#dua">الدعاء</a><a href="#adhkar">الأذكار</a><a href="#apps">تطبيقات نافعة</a><a href="#interactive">التسبيح</a><a href="#wall">سجل الدعاء</a>
 </nav>
 
 <main>
@@ -120,6 +125,19 @@
     </div>
   </section>
 
+  <section class="section" id="wall">
+    <h2>📝 سجل الدعاء</h2>
+    <p class="intro">اكتب دعاءً للفقيد. سيُحفظ على هذا الجهاز والمتصفح فقط، ويمكنك الرجوع إليه حتى دون اتصال بعد تثبيت الموقع.</p>
+    <form id="dua-form" class="wall-form">
+      <input id="dua-name" class="wall-input" type="text" maxlength="45" placeholder="اسمك أو صفتك (اختياري)" autocomplete="name">
+      <textarea id="dua-message" class="wall-input" rows="3" maxlength="500" required placeholder="اكتب دعاءً طيبًا للفقيد..."></textarea>
+      <button class="btn" type="submit">احفظ الدعاء على جهازي</button>
+    </form>
+    <p class="small" id="wall-status" role="status" aria-live="polite">الأدعية خاصة بهذا الجهاز ولا تُرسل إلى خادم.</p>
+    <div id="dua-list" class="wall-messages" aria-live="polite"></div>
+    <button id="clear-duas" class="btn outline" type="button">مسح الأدعية المحفوظة على هذا الجهاز</button>
+  </section>
+
   <section class="section">
     <div class="profile">
       <img class="avatar" src="./Abdullah.jpg" alt="" width="76" height="76" loading="lazy">
@@ -135,6 +153,8 @@
 <footer>
   <p>اللهم اغفر له وارحمه، واجعل هذا العمل نافعًا وخالصًا لوجهك الكريم.</p>
   <p>تنفيذ وتصميم: حسن الشبيبي</p>
+  <button class="btn install-btn" id="install-app" type="button" hidden>تثبيت الموقع على الجوال</button>
+  <p class="small" id="install-help">يمكنك تثبيت الموقع من قائمة المتصفح عند توفر الخيار.</p>
 </footer>
 </body>
 </html>
