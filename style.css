@@ -107,3 +107,26 @@ footer p{margin:4px}
 .install-area .install-btn svg{width:18px;height:18px;display:block}
 .install-area #install-help{margin:3px 0 0}
 @media(max-width:600px){.final-section .profile{align-items:flex-start}.final-section .avatar{width:76px;height:76px;flex-basis:76px}}
+
+
+/* زخارف هندسية جديدة في مقدمة الموقع */
+.hero:before,.hero:after{
+  border-radius:0;
+  transform:rotate(45deg);
+  background:linear-gradient(135deg,#ffffff0a,#ffffff00);
+}
+.hero:before{
+  width:230px;height:230px;top:-150px;right:-80px;
+  border:2px solid #d5a77755;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+}
+.hero:after{
+  width:285px;height:285px;bottom:-205px;left:-105px;
+  border:2px solid #ffffff24;
+  border-radius:28px;
+}
+.emblem{
+  border-radius:18px;
+  outline:1px solid #d5a77755;
+  outline-offset:6px;
+}
