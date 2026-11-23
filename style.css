@@ -92,3 +92,6 @@ footer p{margin:4px}
 .footer-social{display:flex;justify-content:center;gap:10px;margin:12px auto}
 .social-link{display:inline-flex;align-items:center;justify-content:center;min-width:104px;padding:8px 15px;border:1px solid var(--line);border-radius:12px;font-size:13px;font-weight:700;transition:transform .2s,background .2s}
 .social-link:hover{transform:translateY(-2px)}.social-link.whatsapp{color:#167b48;background:#e5f4eb;border-color:#b8dfc8}.social-link.instagram{color:#a13d70;background:#f8eaf1;border-color:#e9c4d5}
+
+.final-section{text-align:center}.final-section h2{justify-content:center}.final-section .intro{margin:8px auto 14px}.final-section .install-btn{margin:8px auto 4px}.final-section #install-help{max-width:520px;margin:6px auto 0;line-height:1.8}
+.footer-credit{margin:10px auto 6px}.footer-social{gap:14px;margin:8px auto 0}.social-link{width:48px;height:48px;min-width:48px;padding:11px;border-radius:50%}.social-link svg{display:block;width:23px;height:23px}
