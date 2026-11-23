@@ -220,11 +220,38 @@
     if (installButton) installButton.hidden = false;
   });
   installButton?.addEventListener("click", async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    await installPrompt.userChoice;
+    if (!installPrompt) {
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const help = isIOS
+        ? "لتثبيت الموقع: اضغط مشاركة في Safari، ثم اختر إضافة إلى الشاشة الرئيسية."
+        : isAndroid
+          ? "لتثبيت الموقع: افتح قائمة Chrome ⋮ ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية."
+          : "لتثبيت الموقع: افتح قائمة Chrome ⋮ ثم اختر حفظ ومشاركة، وبعدها تثبيت الصفحة كتطبيق.";
+      if (wallStatus) wallStatus.textContent = help;
+      else window.alert(help);
+      return;
+    }
+
+    const promptEvent = installPrompt;
     installPrompt = null;
-    installButton.hidden = true;
+    installButton.disabled = true;
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice?.outcome === "accepted") {
+        installButton.hidden = true;
+        if (wallStatus) wallStatus.textContent = "جارٍ تثبيت الموقع...";
+      } else {
+        if (wallStatus) wallStatus.textContent = "لم يتم التثبيت. يمكنك المحاولة مرة أخرى من قائمة Chrome.";
+      }
+    } catch (error) {
+      console.warn("تعذر فتح نافذة التثبيت:", error);
+      if (wallStatus) wallStatus.textContent =
+        "لم تفتح نافذة التثبيت. افتح قائمة Chrome واختر تثبيت التطبيق.";
+    } finally {
+      installButton.disabled = false;
+    }
   });
   window.addEventListener("appinstalled", () => {
     if (installButton) installButton.hidden = true;
