@@ -95,3 +95,15 @@ footer p{margin:4px}
 
 .final-section{text-align:center}.final-section h2{justify-content:center}.final-section .intro{margin:8px auto 14px}.final-section .install-btn{margin:8px auto 4px}.final-section #install-help{max-width:520px;margin:6px auto 0;line-height:1.8}
 .footer-credit{margin:10px auto 6px}.footer-social{gap:14px;margin:8px auto 0}.social-link{width:48px;height:48px;min-width:48px;padding:11px;border-radius:50%}.social-link svg{display:block;width:23px;height:23px}
+
+
+/* بطاقة الذكر والدعاء وزر تثبيت التطبيق أسفلها */
+.final-section{text-align:right}
+.final-section .profile{align-items:center;gap:17px}
+.final-section .profile h2{justify-content:flex-start;margin:0 0 5px}
+.final-section .profile p{margin:4px 0}
+.install-area{display:flex;flex-direction:column;align-items:center;gap:3px;margin:12px auto 24px;text-align:center}
+.install-area .install-btn{margin:0;gap:8px}
+.install-area .install-btn svg{width:18px;height:18px;display:block}
+.install-area #install-help{margin:3px 0 0}
+@media(max-width:600px){.final-section .profile{align-items:flex-start}.final-section .avatar{width:76px;height:76px;flex-basis:76px}}
