@@ -75,40 +75,62 @@
   const wallStatus = $("#wall-status");
   let publishedDuas = [];
 
-  // JSONP لتجاوز قيود CORS في GitHub Pages مع Apps Script.
-  function requestDuaApi(params) {
+  // الاتصال بـ Google Apps Script عبر POST داخل iframe مخفي.
+  // هذه هي آلية القراءة التي اجتازت الاختبار في diagnostics.html.
+  const transportFrame = document.createElement("iframe");
+  transportFrame.name = "duaTransportFrame";
+  transportFrame.title = "اتصال سجل الدعاء";
+  transportFrame.hidden = true;
+  document.body.appendChild(transportFrame);
+
+  let pendingApiRequest = null;
+
+  function makeApiToken() {
+    return "site_" + Date.now() + "_" + Math.random().toString(36).slice(2, 12);
+  }
+
+  function requestDuaApi(fields) {
     return new Promise((resolve, reject) => {
-      const callbackName = "__duaApiCallback_" + Date.now() + "_" +
-        Math.floor(Math.random() * 1000000);
-      const script = document.createElement("script");
-      const query = new URLSearchParams({...params, callback: callbackName});
-      let settled = false;
-
-      const cleanup = () => {
-        if (script.parentNode) script.parentNode.removeChild(script);
-        try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-        window.clearTimeout(timeout);
-      };
-
-      const finish = (error, result) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        if (error) reject(error);
-        else resolve(result);
-      };
-
-      window[callbackName] = result => finish(null, result);
-      script.onerror = () => finish(new Error("تعذر الاتصال بخدمة سجل الدعاء."));
-      script.src = DUA_API_URL + "?" + query.toString();
-      const timeout = window.setTimeout(
-        () => finish(new Error("انتهت مهلة الاتصال. حاول مرة أخرى.")),
-        15000
-      );
-      document.head.appendChild(script);
+      if (pendingApiRequest) {
+        reject(new Error("هناك طلب آخر قيد التنفيذ. حاول بعد لحظات."));
+        return;
+      }
+      const token = makeApiToken();
+      const request = {token, resolve, reject, timer:null};
+      request.timer = window.setTimeout(() => {
+        if (pendingApiRequest !== request) return;
+        pendingApiRequest = null;
+        reject(new Error("انتهت مهلة الاتصال. حاول تحديث الصفحة."));
+      }, 25000);
+      pendingApiRequest = request;
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = DUA_API_URL;
+      form.target = transportFrame.name;
+      form.acceptCharset = "UTF-8";
+      form.style.display = "none";
+      const values = {...fields, token};
+      Object.entries(values).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value ?? "");
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      window.setTimeout(() => form.remove(), 1000);
     });
   }
 
+  window.addEventListener("message", event => {
+    const data = event.data;
+    const request = pendingApiRequest;
+    if (!request || !data || data.channel !== "dua-wall-diagnostic" || data.token !== request.token) return;
+    pendingApiRequest = null;
+    window.clearTimeout(request.timer);
+    request.resolve(data.payload);
+  });
   function renderDuas() {
     if (!wallList) return;
     wallList.replaceChildren();
@@ -148,7 +170,7 @@
   async function loadPublishedDuas() {
     if (wallStatus) wallStatus.textContent = "جارٍ تحميل الأدعية المنشورة...";
     try {
-      const result = await requestDuaApi({});
+      const result = await requestDuaApi({mode:"frameRead", action:"read"});
       if (!result || !result.success || !Array.isArray(result.duas)) {
         throw new Error(result?.message || "تعذر تحميل الأدعية.");
       }
@@ -183,6 +205,7 @@
 
     try {
       const result = await requestDuaApi({
+        mode: "frameSubmit",
         action: "submit",
         dua: message,
         name: name
@@ -195,7 +218,7 @@
       wallForm.reset();
       if (wallStatus) {
         wallStatus.textContent =
-          "وصل دعاؤك بنجاح، وسيظهر للجميع بعد مراجعته والموافقة عليه.";
+          "وصل دعاؤك ونُشر بنجاح. جزاك الله خيرًا.";
       }
       // لا نضيف الدعاء إلى القائمة؛ فهو قيد المراجعة ولن يظهر قبل الموافقة.
     } catch (error) {
