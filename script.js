@@ -80,13 +80,13 @@
   const transportFrame = document.createElement("iframe");
   transportFrame.name = "duaTransportFrame";
   transportFrame.title = "اتصال سجل الدعاء";
-  transportFrame.hidden = true;
+  transportFrame.style.display = "none";
   document.body.appendChild(transportFrame);
 
   let pendingApiRequest = null;
 
   function makeApiToken() {
-    return "site_" + Date.now() + "_" + Math.random().toString(36).slice(2, 12);
+    return "diag_" + Date.now() + "_" + Math.random().toString(36).slice(2, 12);
   }
 
   function requestDuaApi(fields) {
@@ -217,10 +217,9 @@
 
       wallForm.reset();
       if (wallStatus) {
-        wallStatus.textContent =
-          "وصل دعاؤك ونُشر بنجاح. جزاك الله خيرًا.";
+        wallStatus.textContent = "وصل دعاؤك بنجاح. جارٍ تحديث قائمة الأدعية...";
       }
-      // لا نضيف الدعاء إلى القائمة؛ فهو قيد المراجعة ولن يظهر قبل الموافقة.
+      await loadPublishedDuas();
     } catch (error) {
       if (wallStatus) {
         wallStatus.textContent =
