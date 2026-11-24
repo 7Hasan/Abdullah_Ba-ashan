@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#435333">
-  <title>فحص سجل الدعاء - iframe وPOST</title>
+  <title>فحص قراءة سجل الدعاء - POST</title>
   <style>
     :root{color-scheme:light;--olive:#435333;--bg:#f3ebdd;--copper:#b87945}
     *{box-sizing:border-box}
@@ -22,42 +22,21 @@
     .warning{border-right:4px solid var(--copper);padding:8px 12px;background:#fbf4eb;border-radius:6px}
     .status{font-weight:bold;color:var(--olive)}
     iframe.transport-frame{display:none;width:0;height:0;border:0}
-    iframe.forms-embed{display:block;width:100%;height:900px;border:0;border-radius:8px;background:#fff}
   </style>
 </head>
 <body>
 <main>
   <h1>صفحة تشخيص سجل الدعاء</h1>
-  <p>هذه النسخة تختبر الاتصال باستخدام iframe مخفي وpostMessage للقراءة، ونموذج POST مخفي للإرسال. لن تنتقل من هذه الصفحة أثناء الاختبار.</p>
-  <p class="warning">زر الإرسال يضيف صفًا جديدًا في Google Sheets بحالة «قيد المراجعة». إذا انتهى الاختبار بمهلة انتظار، فقد يكون الإرسال وصل رغم عدم وصول الرد؛ افحص الجدول قبل إعادة المحاولة.</p>
-
-  <section style="margin:20px 0;padding:16px;border:1px solid #ded5c5;border-radius:14px;background:#fff">
-    <h2 style="margin:0 0 8px;color:var(--olive);font-size:20px">اختبار نموذج Google Forms</h2>
-    <p>هذا نموذج تجريبي مضمّن داخل صفحة الفحص. الردود تُحفظ في ورقة الردود المرتبطة بملف Google Sheets، ولا تُضاف إلى ورقة الأدعية الحالية تلقائيًا.</p>
-    <iframe
-      class="forms-embed"
-      src="https://forms.gle/JvFut1VMvcXgiKCs8?embedded=true"
-      title="نموذج دعاء للفقيد - تجربة"
-      loading="lazy"
-      style="width:100%;height:900px;border:0;border-radius:8px;background:#fff"
-      allow="camera; microphone; fullscreen"
-    >جارٍ تحميل نموذج الدعاء...</iframe>
-    <p style="font-size:13px;color:#756c5c">إذا لم يظهر النموذج أو طلب تسجيل الدخول، أخبرنا بنص الرسالة الظاهرة. لا ترسل دعاءً حقيقيًا أثناء الاختبار الأول.</p>
-  </section>
-
-  <label for="test-name">اسم الاختبار</label>
-  <input id="test-name" maxlength="45" value="اختبار iframe POST">
-  <label for="test-dua">نص دعاء الاختبار</label>
-  <textarea id="test-dua" maxlength="500">دعاء تجريبي لفحص استقبال iframe وPOST من الجوال - يمكن تجاهله.</textarea>
+  <p>هذه الصفحة تختبر قراءة الأدعية فقط عبر POST داخل iframe مخفي، ثم تستقبل النتيجة عبر postMessage. لا يتم إرسال أي دعاء أو إضافة صفوف جديدة.</p>
+  <p class="warning">هذا الاختبار مخصص للقراءة فقط. يستخدم POST لأن مسار الإرسال عبر POST ثبت نجاحه سابقًا، بينما كان مسار القراءة عبر GET يتعطل. لن يغيّر أي بيانات في الجدول.</p>
 
   <div>
-    <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية (iframe)</button>
-    <button id="send-btn" type="button">اختبار إرسال الدعاء (POST)</button>
+    <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية عبر POST</button>
   </div>
 
   <h3>معلومات الجهاز والاتصال</h3>
   <pre id="device-info">جارٍ جمع المعلومات...</pre>
-  <h3>الأدعية المسترجعة من ردود النموذج</h3>
+  <h3>الأدعية المسترجعة من الورقة1</h3>
   <div id="duas-list" style="display:grid;gap:10px;margin:12px 0"></div>
   <h3>نتيجة آخر اختبار</h3>
   <p id="status" class="status" aria-live="polite">لم يبدأ الاختبار بعد.</p>
@@ -73,8 +52,7 @@
   const output = document.getElementById("output");
   const duasList = document.getElementById("duas-list");
   const readBtn = document.getElementById("read-btn");
-  const sendBtn = document.getElementById("send-btn");
-  let pending = null;
+    let pending = null;
 
   document.getElementById("device-info").textContent = [
     "User-Agent: " + navigator.userAgent,
@@ -91,7 +69,6 @@
 
   function setBusy(busy) {
     readBtn.disabled = busy;
-    sendBtn.disabled = busy;
   }
 
   function receiveMessage(event) {
@@ -111,7 +88,7 @@
       if (!duas.length) {
         const empty = document.createElement("p");
         empty.textContent = payload && payload.success
-          ? "نجح الاتصال، لكن لم تُرجع ورقة ردود النموذج أي أدعية."
+          ? "نجح الاتصال، لكن لا توجد أدعية منشورة في الورقة1."
           : "لم تصل قائمة أدعية قابلة للعرض.";
         duasList.appendChild(empty);
       } else {
@@ -176,30 +153,9 @@
 
   function runRead() {
     const token = makeToken();
-    const requestUrl = API + "?mode=frameRead&token=" + encodeURIComponent(token);
-    const activeToken = begin("READ", "GET داخل iframe مخفي", requestUrl);
+    const requestUrl = API + " [POST form -> hidden iframe; mode=frameRead]";
+    const activeToken = begin("READ", "POST form داخل iframe مخفي", requestUrl);
     if (!activeToken) return;
-    // نستخدم الرمز نفسه الذي ينتظره مستمع postMessage.
-    pending.token = token;
-    frame.src = requestUrl;
-  }
-
-  function runSubmit() {
-    const dua = document.getElementById("test-dua").value.trim();
-    const name = document.getElementById("test-name").value.trim() || "اختبار iframe POST";
-    if (!dua) {
-      status.textContent = "اكتب نص دعاء الاختبار أولاً.";
-      return;
-    }
-    if (dua.length > 500 || name.length > 45) {
-      status.textContent = "تحقق من طول الدعاء (500 حرف) والاسم (45 حرفًا).";
-      return;
-    }
-    if (!confirm("سيُضاف صف اختبار جديد إلى Google Sheets بحالة قيد المراجعة. هل تريد المتابعة؟")) return;
-
-    const requestUrl = API + " [POST form -> hidden iframe]";
-    const token = begin("SUBMIT", "POST form داخل iframe مخفي", requestUrl);
-    if (!token) return;
 
     const form = document.createElement("form");
     form.method = "POST";
@@ -208,7 +164,7 @@
     form.acceptCharset = "UTF-8";
     form.style.display = "none";
 
-    const fields = {mode:"frameSubmit", action:"submit", dua, name, token};
+    const fields = {mode:"frameRead", action:"read", token:activeToken};
     Object.entries(fields).forEach(([key, value]) => {
       const input = document.createElement("input");
       input.type = "hidden";
@@ -218,13 +174,13 @@
     });
 
     document.body.appendChild(form);
-    output.textContent += "\nFORM TARGET: " + frame.name + "\nFORM FIELDS: mode, action, dua, name, token";
     form.submit();
     setTimeout(() => form.remove(), 1000);
   }
 
+
+
   readBtn.addEventListener("click", runRead);
-  sendBtn.addEventListener("click", runSubmit);
 })();
 </script>
 </body>
