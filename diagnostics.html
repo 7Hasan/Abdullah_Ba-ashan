@@ -33,6 +33,7 @@
   <div>
     <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية عبر POST</button>
     <button id="stats-read-btn" type="button">اختبار قراءة إحصائيات الزيارات (لا يضيف زيارة)</button>
+    <button id="stats-track-btn" type="button">تسجيل زيارة تجريبية واحدة</button>
   </div>
 
   <h3>معلومات الجهاز والاتصال</h3>
@@ -56,6 +57,7 @@
   const duasList = document.getElementById("duas-list");
   const readBtn = document.getElementById("read-btn");
   const statsReadBtn = document.getElementById("stats-read-btn");
+  const statsTrackBtn = document.getElementById("stats-track-btn");
   const statsCount = document.getElementById("stats-count");
     let pending = null;
 
@@ -74,6 +76,8 @@
 
   function setBusy(busy) {
     readBtn.disabled = busy;
+    statsReadBtn.disabled = busy;
+    statsTrackBtn.disabled = busy;
   }
 
   function receiveMessage(event) {
@@ -88,11 +92,11 @@
 
     const payload = data.payload;
     const elapsed = Date.now() - current.started;
-    if (current.kind === "STATS_READ") {
+    if (current.kind === "STATS_READ" || current.kind === "STATS_TRACK") {
       if (payload && payload.success && Number.isFinite(Number(payload.count))) {
         statsCount.textContent = "إجمالي الزيارات: " + Number(payload.count).toLocaleString("ar");
       } else {
-        statsCount.textContent = "تعذرت قراءة العدد: " + ((payload && payload.message) || "رد غير مكتمل");
+        statsCount.textContent = "تعذرت العملية: " + ((payload && payload.message) || "رد غير مكتمل");
       }
     }
 
@@ -220,8 +224,35 @@
     setTimeout(() => form.remove(), 1000);
   }
 
+  function runStatsTrack() {
+    const requestUrl = API + " [POST form -> hidden iframe; mode=frameStats, action=track]";
+    const activeToken = begin("STATS_TRACK", "POST form داخل iframe مخفي", requestUrl);
+    if (!activeToken) return;
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = API;
+    form.target = frame.name;
+    form.acceptCharset = "UTF-8";
+    form.style.display = "none";
+
+    const fields = {mode:"frameStats", action:"track", token:activeToken};
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => form.remove(), 1000);
+  }
+
   readBtn.addEventListener("click", runRead);
   statsReadBtn.addEventListener("click", runStatsRead);
+  statsTrackBtn.addEventListener("click", runStatsTrack);
 })();
 </script>
 </body>
