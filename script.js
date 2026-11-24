@@ -131,6 +131,11 @@
     window.clearTimeout(request.timer);
     request.resolve(data.payload);
   });
+  // نعرض 3 أدعية فقط في البداية، ثم نكشف 3 إضافية مع كل ضغطة.
+  const DUA_PAGE_SIZE = 3;
+  let visibleDuasCount = DUA_PAGE_SIZE;
+  let showMoreDuasButton = null;
+
   function renderDuas() {
     if (!wallList) return;
     wallList.replaceChildren();
@@ -140,10 +145,12 @@
       empty.className = "small";
       empty.textContent = "لا توجد أدعية منشورة حتى الآن. كن أول من يترك دعاءً.";
       wallList.appendChild(empty);
+      if (showMoreDuasButton) showMoreDuasButton.hidden = true;
       return;
     }
 
-    publishedDuas.slice().reverse().forEach(item => {
+    const newestFirst = publishedDuas.slice().reverse();
+    newestFirst.slice(0, visibleDuasCount).forEach(item => {
       const card = document.createElement("article");
       card.className = "wall-msg-card";
 
@@ -165,6 +172,22 @@
       card.append(name, message, date);
       wallList.appendChild(card);
     });
+
+    const remaining = Math.max(0, newestFirst.length - visibleDuasCount);
+    if (!showMoreDuasButton) {
+      showMoreDuasButton = document.createElement("button");
+      showMoreDuasButton.type = "button";
+      showMoreDuasButton.className = "btn outline";
+      showMoreDuasButton.addEventListener("click", () => {
+        visibleDuasCount += DUA_PAGE_SIZE;
+        renderDuas();
+      });
+      wallList.insertAdjacentElement("afterend", showMoreDuasButton);
+    }
+    showMoreDuasButton.hidden = remaining === 0;
+    showMoreDuasButton.textContent = remaining > 0
+      ? `عرض المزيد من الأدعية (${remaining} متبقية)`
+      : "";
   }
 
   async function loadPublishedDuas() {
