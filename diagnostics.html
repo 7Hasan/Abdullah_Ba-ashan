@@ -32,12 +32,15 @@
 
   <div>
     <button id="read-btn" class="secondary" type="button">اختبار تحميل الأدعية عبر POST</button>
+    <button id="stats-read-btn" type="button">اختبار قراءة إحصائيات الزيارات (لا يضيف زيارة)</button>
   </div>
 
   <h3>معلومات الجهاز والاتصال</h3>
   <pre id="device-info">جارٍ جمع المعلومات...</pre>
   <h3>الأدعية المسترجعة من الورقة1</h3>
   <div id="duas-list" style="display:grid;gap:10px;margin:12px 0"></div>
+  <h3>إجمالي الزيارات المسجل</h3>
+  <p id="stats-count" class="status">لم يتم اختبار الإحصائيات بعد.</p>
   <h3>نتيجة آخر اختبار</h3>
   <p id="status" class="status" aria-live="polite">لم يبدأ الاختبار بعد.</p>
   <pre id="output">ستظهر تفاصيل الاختبار هنا.</pre>
@@ -52,6 +55,8 @@
   const output = document.getElementById("output");
   const duasList = document.getElementById("duas-list");
   const readBtn = document.getElementById("read-btn");
+  const statsReadBtn = document.getElementById("stats-read-btn");
+  const statsCount = document.getElementById("stats-count");
     let pending = null;
 
   document.getElementById("device-info").textContent = [
@@ -74,7 +79,8 @@
   function receiveMessage(event) {
     if (!pending) return;
     const data = event.data;
-    if (!data || data.channel !== "dua-wall-diagnostic" || data.token !== pending.token) return;
+    const expectedChannel = pending.kind === "STATS_READ" ? "visitor-stats" : "dua-wall-diagnostic";
+    if (!data || data.channel !== expectedChannel || data.token !== pending.token) return;
     const current = pending;
     pending = null;
     clearTimeout(current.timer);
@@ -82,6 +88,14 @@
 
     const payload = data.payload;
     const elapsed = Date.now() - current.started;
+    if (current.kind === "STATS_READ") {
+      if (payload && payload.success && Number.isFinite(Number(payload.count))) {
+        statsCount.textContent = "إجمالي الزيارات: " + Number(payload.count).toLocaleString("ar");
+      } else {
+        statsCount.textContent = "تعذرت قراءة العدد: " + ((payload && payload.message) || "رد غير مكتمل");
+      }
+    }
+
     if (current.kind === "READ") {
       const duas = payload && Array.isArray(payload.duas) ? payload.duas : [];
       duasList.replaceChildren();
@@ -180,7 +194,34 @@
 
 
 
+  function runStatsRead() {
+    const requestUrl = API + " [POST form -> hidden iframe; mode=frameStats, action=read]";
+    const activeToken = begin("STATS_READ", "POST form داخل iframe مخفي", requestUrl);
+    if (!activeToken) return;
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = API;
+    form.target = frame.name;
+    form.acceptCharset = "UTF-8";
+    form.style.display = "none";
+
+    const fields = {mode:"frameStats", action:"read", token:activeToken};
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => form.remove(), 1000);
+  }
+
   readBtn.addEventListener("click", runRead);
+  statsReadBtn.addEventListener("click", runStatsRead);
 })();
 </script>
 </body>
