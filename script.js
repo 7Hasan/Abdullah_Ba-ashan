@@ -135,6 +135,7 @@
   const DUA_PAGE_SIZE = 3;
   let visibleDuasCount = DUA_PAGE_SIZE;
   let showMoreDuasButton = null;
+  let showLessDuasButton = null;
 
   function renderDuas() {
     if (!wallList) return;
@@ -179,7 +180,7 @@
       showMoreDuasButton.type = "button";
       showMoreDuasButton.className = "btn outline";
       showMoreDuasButton.addEventListener("click", () => {
-        visibleDuasCount += DUA_PAGE_SIZE;
+        visibleDuasCount = Math.min(visibleDuasCount + DUA_PAGE_SIZE, newestFirst.length);
         renderDuas();
       });
       wallList.insertAdjacentElement("afterend", showMoreDuasButton);
@@ -188,6 +189,20 @@
     showMoreDuasButton.textContent = remaining > 0
       ? `عرض المزيد من الأدعية (${remaining} متبقية)`
       : "";
+
+    if (!showLessDuasButton) {
+      showLessDuasButton = document.createElement("button");
+      showLessDuasButton.type = "button";
+      showLessDuasButton.className = "btn outline";
+      showLessDuasButton.textContent = "عرض أقل";
+      showLessDuasButton.addEventListener("click", () => {
+        visibleDuasCount = DUA_PAGE_SIZE;
+        renderDuas();
+        wallList.scrollIntoView({behavior: reducedMotion ? "auto" : "smooth", block: "start"});
+      });
+      showMoreDuasButton.insertAdjacentElement("afterend", showLessDuasButton);
+    }
+    showLessDuasButton.hidden = visibleDuasCount <= DUA_PAGE_SIZE || remaining > 0;
   }
 
   async function loadPublishedDuas() {
