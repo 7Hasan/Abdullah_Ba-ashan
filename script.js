@@ -62,7 +62,7 @@
     const urls = {
       dorar: "https://dorar.net/hadith/search?q=",
       islamweb: "https://www.islamweb.net/ar/articles/index.php?page=expsearch&stxt=",
-      binbaz: "https://binbaz.org.sa/search?q=&type/fatwa"
+      binbaz: "https://binbaz.org.sa/search?q="
     };
     const base = urls[source];
     if (base) window.open(base + encodeURIComponent(query), "_blank", "noopener,noreferrer");
