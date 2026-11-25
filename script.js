@@ -385,42 +385,37 @@
     const sessionVisitKey = "abdullah_baashan_session_visit_date_v1";
     const today = getAdenDateKey();
     let alreadyTracked = false;
-    let storageAvailable = false;
+    let localMarkConfirmed = false;
+    let sessionMarkConfirmed = false;
 
+    // لا نعدّ التخزين متاحًا إلا بعد نجاح الكتابة ثم قراءة القيمة نفسها.
     try {
-      storageAvailable = true;
       alreadyTracked = localStorage.getItem(visitStorageKey) === today;
+      if (!alreadyTracked) {
+        localStorage.setItem(visitStorageKey, today);
+        localMarkConfirmed = localStorage.getItem(visitStorageKey) === today;
+      } else {
+        localMarkConfirmed = true;
+      }
     } catch (error) {
       console.warn("Visitor local storage unavailable:", error);
     }
 
-    // sessionStorage يمنع تكرار العد عند تحديث الصفحة حتى لو تعذر localStorage.
+    // بديل للجلسة الحالية إذا منع المتصفح التخزين الدائم.
     try {
       if (sessionStorage.getItem(sessionVisitKey) === today) {
         alreadyTracked = true;
+        sessionMarkConfirmed = true;
+      } else {
+        sessionStorage.setItem(sessionVisitKey, today);
+        sessionMarkConfirmed = sessionStorage.getItem(sessionVisitKey) === today;
       }
     } catch (error) {
       console.warn("Visitor session storage unavailable:", error);
     }
 
-    let sessionMarked = false;
-    try {
-      sessionStorage.setItem(sessionVisitKey, today);
-      sessionMarked = true;
-    } catch (error) {
-      console.warn("Could not mark visitor session:", error);
-    }
-
-    if (storageAvailable) {
-      try {
-        localStorage.setItem(visitStorageKey, today);
-      } catch (error) {
-        console.warn("Could not persist visitor date:", error);
-      }
-    }
-
-    // إذا فشل التخزينان معًا فلا نرسل طلبًا قد يتكرر مع كل تحديث.
-    if (!alreadyTracked && (storageAvailable || sessionMarked)) {
+    // لا نرسل الزيارة إلا إذا تأكدنا أن أحد التخزينين سيمنع تكرارها.
+    if (!alreadyTracked && (localMarkConfirmed || sessionMarkConfirmed)) {
       try {
         await requestVisitorStats("track");
       } catch (error) {
