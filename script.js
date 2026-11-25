@@ -380,23 +380,47 @@
   }
 
   async function initializeVisitorStats() {
-    // تُحتسب زيارة واحدة لكل متصفح في اليوم بتوقيت عدن، حتى مع تحديث الصفحة.
-    // نكتب العلامة قبل الإرسال حتى لا نكرر التسجيل إذا انتهت المهلة بعد وصول الطلب للخادم.
+    // زيارة واحدة لكل متصفح في اليوم بتوقيت عدن، مع حماية إضافية للجلسة الحالية.
     const visitStorageKey = "abdullah_baashan_last_visit_date_v1";
-    let shouldTrackVisit = false;
+    const sessionVisitKey = "abdullah_baashan_session_visit_date_v1";
+    const today = getAdenDateKey();
+    let alreadyTracked = false;
+    let storageAvailable = false;
 
     try {
-      const today = getAdenDateKey();
-      if (localStorage.getItem(visitStorageKey) !== today) {
-        localStorage.setItem(visitStorageKey, today);
-        shouldTrackVisit = true;
-      }
+      storageAvailable = true;
+      alreadyTracked = localStorage.getItem(visitStorageKey) === today;
     } catch (error) {
-      // عند تعذر التخزين لا نسجل الزيارة؛ تفاديًا لزيادة العدد مع كل تحديث.
-      console.warn("Visitor deduplication storage unavailable:", error);
+      console.warn("Visitor local storage unavailable:", error);
     }
 
-    if (shouldTrackVisit) {
+    // sessionStorage يمنع تكرار العد عند تحديث الصفحة حتى لو تعذر localStorage.
+    try {
+      if (sessionStorage.getItem(sessionVisitKey) === today) {
+        alreadyTracked = true;
+      }
+    } catch (error) {
+      console.warn("Visitor session storage unavailable:", error);
+    }
+
+    let sessionMarked = false;
+    try {
+      sessionStorage.setItem(sessionVisitKey, today);
+      sessionMarked = true;
+    } catch (error) {
+      console.warn("Could not mark visitor session:", error);
+    }
+
+    if (storageAvailable) {
+      try {
+        localStorage.setItem(visitStorageKey, today);
+      } catch (error) {
+        console.warn("Could not persist visitor date:", error);
+      }
+    }
+
+    // إذا فشل التخزينان معًا فلا نرسل طلبًا قد يتكرر مع كل تحديث.
+    if (!alreadyTracked && (storageAvailable || sessionMarked)) {
       try {
         await requestVisitorStats("track");
       } catch (error) {
@@ -419,14 +443,38 @@
 
   initializeVisitorStats();
 
-  // طلب تثبيت الموقع عندما يدعم المتصفح واجهة التثبيت.
+  // تثبيت التطبيق: رسائل المساعدة تبقى أسفل زر التثبيت ولا تختلط بنموذج الدعاء.
   let installPrompt = null;
   const installButton = $("#install-app");
+  const installHelp = $("#install-help");
+  const installArea = installButton?.closest(".install-area");
+
+  function hideInstallArea() {
+    if (installButton) installButton.hidden = true;
+    if (installHelp) installHelp.hidden = true;
+    if (installArea) installArea.hidden = true;
+  }
+
+  function showInstallHelp(message) {
+    if (installHelp) {
+      installHelp.textContent = message;
+      installHelp.hidden = false;
+    }
+  }
+
+  const alreadyInstalled =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    navigator.standalone === true;
+
+  if (alreadyInstalled) hideInstallArea();
+
   window.addEventListener("beforeinstallprompt", event => {
     event.preventDefault();
     installPrompt = event;
-    if (installButton) installButton.hidden = false;
+    if (!alreadyInstalled && installButton) installButton.hidden = false;
   });
+
   installButton?.addEventListener("click", async () => {
     if (!installPrompt) {
       const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -436,8 +484,7 @@
         : isAndroid
           ? "لتثبيت الموقع: افتح قائمة Chrome ⋮ ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية."
           : "لتثبيت الموقع: افتح قائمة Chrome ⋮ ثم اختر حفظ ومشاركة، وبعدها تثبيت الصفحة كتطبيق.";
-      if (wallStatus) wallStatus.textContent = help;
-      else window.alert(help);
+      showInstallHelp(help);
       return;
     }
 
@@ -448,23 +495,19 @@
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice;
       if (choice?.outcome === "accepted") {
-        installButton.hidden = true;
-        if (wallStatus) wallStatus.textContent = "جارٍ تثبيت الموقع...";
+        hideInstallArea();
       } else {
-        if (wallStatus) wallStatus.textContent = "لم يتم التثبيت. يمكنك المحاولة مرة أخرى من قائمة Chrome.";
+        showInstallHelp("لم يتم التثبيت. يمكنك المحاولة مرة أخرى من قائمة المتصفح.");
       }
     } catch (error) {
       console.warn("تعذر فتح نافذة التثبيت:", error);
-      if (wallStatus) wallStatus.textContent =
-        "لم تفتح نافذة التثبيت. افتح قائمة Chrome واختر تثبيت التطبيق.";
+      showInstallHelp("لم تفتح نافذة التثبيت. افتح قائمة المتصفح واختر تثبيت التطبيق.");
     } finally {
       installButton.disabled = false;
     }
   });
-  window.addEventListener("appinstalled", () => {
-    if (installButton) installButton.hidden = true;
-    if (wallStatus) wallStatus.textContent = "تم تثبيت الموقع على جهازك.";
-  });
+
+  window.addEventListener("appinstalled", hideInstallArea);
 
   // ملفات الموقع الأساسية تُخزّن محليًا للعمل دون اتصال بعد أول زيارة.
   if ("serviceWorker" in navigator && location.protocol === "https:") {
