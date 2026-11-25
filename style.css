@@ -152,9 +152,10 @@ footer p{margin:4px}
   width:19px;height:19px;fill:none;stroke:currentColor;
   stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round;
 }
-.visitor-eye .eye-closed{display:none}
-.visitor-eye[aria-expanded="true"] .eye-open{display:none}
-.visitor-eye[aria-expanded="true"] .eye-closed{display:block}
+.visitor-eye .eye-open{display:none}
+.visitor-eye .eye-closed{display:block}
+.visitor-eye[aria-expanded="true"] .eye-open{display:block}
+.visitor-eye[aria-expanded="true"] .eye-closed{display:none}
 .visitor-total{
   color:#ffffffdf;font-size:13px;font-weight:700;
   font-variant-numeric:tabular-nums;
