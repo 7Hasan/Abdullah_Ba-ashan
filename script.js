@@ -368,12 +368,41 @@
     );
   });
 
+  function getAdenDateKey() {
+    const parts = new Intl.DateTimeFormat("en", {
+      timeZone: "Asia/Aden",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return values.year + "-" + values.month + "-" + values.day;
+  }
+
   async function initializeVisitorStats() {
-    // لا نعيد محاولة التسجيل عند انتهاء المهلة؛ فقد تكون الزيارة سُجلت بالفعل.
+    // تُحتسب زيارة واحدة لكل متصفح في اليوم بتوقيت عدن، حتى مع تحديث الصفحة.
+    // نكتب العلامة قبل الإرسال حتى لا نكرر التسجيل إذا انتهت المهلة بعد وصول الطلب للخادم.
+    const visitStorageKey = "abdullah_baashan_last_visit_date_v1";
+    let shouldTrackVisit = false;
+
     try {
-      await requestVisitorStats("track");
+      const today = getAdenDateKey();
+      if (localStorage.getItem(visitStorageKey) !== today) {
+        localStorage.setItem(visitStorageKey, today);
+        shouldTrackVisit = true;
+      }
     } catch (error) {
-      console.warn("Visitor tracking failed:", error);
+      // عند تعذر التخزين لا نسجل الزيارة؛ تفاديًا لزيادة العدد مع كل تحديث.
+      console.warn("Visitor deduplication storage unavailable:", error);
+    }
+
+    if (shouldTrackVisit) {
+      try {
+        await requestVisitorStats("track");
+      } catch (error) {
+        // لا نعيد المحاولة تلقائيًا؛ ربما سُجلت الزيارة بالفعل رغم انتهاء المهلة.
+        console.warn("Visitor tracking failed:", error);
+      }
     }
 
     // القراءة مستقلة ولا تضيف زيارة، وتعرض للزائر الإجمالي فقط.
