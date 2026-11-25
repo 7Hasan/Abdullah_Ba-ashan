@@ -61,7 +61,7 @@
     if (!query) { alert("اكتب موضوع البحث أولاً."); $("#islamic-search-query")?.focus(); return; }
     const urls = {
       dorar: "https://dorar.net/hadith/search?q=",
-      islamweb: "https://www.islamweb.net/ar/search/index.php?searchText=",
+      islamweb: "https://www.islamweb.net/ar/articles/index.php?page=expsearch&stxt=",
       binbaz: "https://binbaz.org.sa/search?search="
     };
     const base = urls[source];
