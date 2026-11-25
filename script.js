@@ -271,6 +271,125 @@
 
   loadPublishedDuas();
 
+  // إحصائيات الزوار: تسجيل واحد عند فتح الصفحة، ثم قراءة الإجمالي التراكمي.
+  // طلب الإحصائيات مستقل عن قناة الأدعية حتى لا يؤثر تعطلها على سجل الدعاء.
+  const visitorEye = $("#visitor-eye");
+  const visitorTotal = $("#visitor-total");
+  const visitorStatsFrame = document.createElement("iframe");
+  visitorStatsFrame.name = "visitorStatsTransportFrame";
+  visitorStatsFrame.title = "اتصال إحصائيات الزيارات";
+  visitorStatsFrame.style.display = "none";
+  document.body.appendChild(visitorStatsFrame);
+
+  let pendingVisitorStatsRequest = null;
+  let visitorTotalLoaded = false;
+
+  function requestVisitorStats(action) {
+    return new Promise((resolve, reject) => {
+      if (pendingVisitorStatsRequest) {
+        reject(new Error("طلب إحصائيات آخر قيد التنفيذ."));
+        return;
+      }
+
+      const token = "visitor_" + Date.now() + "_" +
+        Math.random().toString(36).slice(2, 12);
+      const request = { token, action, resolve, reject, timer: null };
+
+      request.timer = window.setTimeout(() => {
+        if (pendingVisitorStatsRequest !== request) return;
+        pendingVisitorStatsRequest = null;
+        reject(new Error("انتهت مهلة طلب إحصائيات الزيارات."));
+      }, 25000);
+
+      pendingVisitorStatsRequest = request;
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = DUA_API_URL;
+      form.target = visitorStatsFrame.name;
+      form.acceptCharset = "UTF-8";
+      form.style.display = "none";
+
+      const fields = {
+        mode: "frameStats",
+        action,
+        token
+      };
+
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+      window.setTimeout(() => form.remove(), 1000);
+    });
+  }
+
+  window.addEventListener("message", event => {
+    const data = event.data;
+    const request = pendingVisitorStatsRequest;
+
+    if (
+      !request ||
+      !data ||
+      data.channel !== "visitor-stats" ||
+      data.token !== request.token
+    ) return;
+
+    pendingVisitorStatsRequest = null;
+    window.clearTimeout(request.timer);
+    request.resolve(data.payload);
+  });
+
+  function renderVisitorTotal(total) {
+    if (!visitorEye || !visitorTotal) return;
+    const safeTotal = Number(total);
+    if (!Number.isFinite(safeTotal) || safeTotal < 0) return;
+
+    visitorTotal.textContent =
+      "إجمالي الزيارات: " + Math.floor(safeTotal).toLocaleString("ar");
+    visitorTotalLoaded = true;
+    visitorEye.disabled = false;
+  }
+
+  visitorEye?.addEventListener("click", () => {
+    if (!visitorTotalLoaded || !visitorTotal) return;
+    const isVisible = visitorEye.getAttribute("aria-expanded") === "true";
+    visitorEye.setAttribute("aria-expanded", String(!isVisible));
+    visitorTotal.hidden = isVisible;
+    visitorEye.setAttribute(
+      "aria-label",
+      isVisible ? "إظهار إجمالي الزيارات" : "إخفاء إجمالي الزيارات"
+    );
+  });
+
+  async function initializeVisitorStats() {
+    // لا نعيد محاولة التسجيل عند انتهاء المهلة؛ فقد تكون الزيارة سُجلت بالفعل.
+    try {
+      await requestVisitorStats("track");
+    } catch (error) {
+      console.warn("Visitor tracking failed:", error);
+    }
+
+    // القراءة مستقلة ولا تضيف زيارة، وتعرض للزائر الإجمالي فقط.
+    try {
+      const result = await requestVisitorStats("read");
+      if (!result || !result.success) {
+        throw new Error(result?.message || "تعذرت قراءة إجمالي الزيارات.");
+      }
+      renderVisitorTotal(result.count);
+    } catch (error) {
+      console.warn("Visitor total loading failed:", error);
+    }
+  }
+
+  initializeVisitorStats();
+
   // طلب تثبيت الموقع عندما يدعم المتصفح واجهة التثبيت.
   let installPrompt = null;
   const installButton = $("#install-app");
