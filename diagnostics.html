@@ -83,7 +83,7 @@
   function receiveMessage(event) {
     if (!pending) return;
     const data = event.data;
-    const expectedChannel = pending.kind === "STATS_READ" ? "visitor-stats" : "dua-wall-diagnostic";
+    const expectedChannel = (pending.kind === "STATS_READ" || pending.kind === "STATS_TRACK") ? "visitor-stats" : "dua-wall-diagnostic";
     if (!data || data.channel !== expectedChannel || data.token !== pending.token) return;
     const current = pending;
     pending = null;
